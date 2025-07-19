@@ -1,0 +1,94 @@
+1. Paradigma de Programação Escolhido
+-------------------------------------
+c) Programação Orientada a Objetos
+
+Justificativa:
+- Entidades naturais (Livro, Autor, Usuário, Empréstimo) têm estado (atributos) e comportamento (regras de negócio) facilmente mapeáveis em classes.
+- Relacionamentos 1→N e N→1 (Autor→Livros, Usuário→Empréstimos, Livro→Empréstimos) são modelados nativamente.
+- Encapsulamento e coesão: cada classe agrupa seus dados e operações (“marcarEmprestado”, “registrarDevolução”, etc.).
+- Reuso por herança (e.g. Pessoa → Autor/Usuário) e composição, facilitando extensão futura (novos tipos de publicação, políticas de multa, etc.).
+- Evolução e manutenção mais simples: seguindo SOLID, acrescentar novas regras ou entidades (e.g. Revista, Multa) sem grandes refatorações.
+- Cenário não exige transformações funcionais imutáveis; estados mutáveis e persistência são naturais em POO.
+
+2. Diagrama de Classes - Versão 1 (atributos e tipos)
+-----------------------------------------------------
+Autor
+  • id: int
+  • nome: String
+  • nacionalidade: String
+  • obras: List<Livro>
+
+Livro
+  • id: int
+  • titulo: String
+  • genero: String (ou enum Genero)
+  • status: StatusLivro (enum DISPONIVEL, EMPRESTADO)
+  • autor: Autor
+
+Usuario
+  • id: int
+  • nome: String
+  • idade: int
+  • historico: List<Emprestimo>
+
+Emprestimo
+  • id: int
+  • livro: Livro
+  • usuario: Usuario
+  • dataRetirada: LocalDate
+  • dataPrevistaDevolucao: LocalDate
+  • dataDevolucao: LocalDate? (nulo se ainda não devolvido)
+
+3. Relacionamentos e Cardinalidades
+-----------------------------------
+- Autor 1 —— * Livro  
+- Livro * —— 1 Autor  
+- Usuario 1 —— * Emprestimo  
+- Emprestimo * —— 1 Usuario  
+- Livro 1 —— * Emprestimo (histórico)  
+- Emprestimo * —— 1 Livro  
+
+4. Métodos a Acrescentar (versão 2, a partir dos fluxos)
+-------------------------------------------------------
+Autor
+  + adicionarObra(livro: Livro): void
+
+Livro
+  + isDisponivel(): boolean
+  + marcarEmprestado(): void          ← Fluxo Empréstimo
+  + marcarDisponivel(): void          ← Fluxo Devolução
+
+Usuario
+  + possuiEmprestimoVencido(): boolean  ← Fluxo Empréstimo
+  + adicionarEmprestimo(e: Emprestimo): void ← Fluxo Empréstimo
+  + emprestimosAtivos(): List<Emprestimo>
+
+Emprestimo
+  + registrarRetirada(data: LocalDate, prev: LocalDate): void  ← Fluxo Empréstimo
+  + registrarDevolucao(data: LocalDate): void                ← Fluxo Devolução
+  + estaAtrasado(hoje: LocalDate): boolean                   ← Fluxo Empréstimo / Devolução
+
+ServicoEmprestimo (Domain Service)
+  + solicitarEmprestimo(u: Usuario, livros: List<Livro>): List<Emprestimo>
+      • validarAptidao(u, livro)
+      • criar e registrar cada Emprestimo
+      • u.adicionarEmprestimo(...)
+      • livro.marcarEmprestado()
+  + validarAptidao(u: Usuario, livro: Livro): void
+      • checar u.possuiEmprestimoVencido()
+      • checar livro.isDisponivel()
+      • checar restrição de idade por gênero
+  + devolverLivros(u: Usuario, livros: List<Livro>, data: LocalDate): void
+      • localizar empréstimo ativo
+      • emprestimo.registrarDevolucao(data)
+      • livro.marcarDisponivel()
+
+5. Observações e Evoluções Futuras
+----------------------------------
+- Implementar multa por atraso em Emprestimo (método calcularMulta).
+- Adicionar subclasses de Publicação (Revista, MidiaDigital) herdando de uma superclasse abstrata.
+- Padrão Repositório (RepositorioLivro, RepositorioUsuario) para desacoplar persistência.
+- Policy objects para regras de empréstimo (prazo, limites, renovações).
+- Interface “Registravel” ou “Persistivel” para unificar CRUD.
+
+— Fim do dissertativa.txt —
